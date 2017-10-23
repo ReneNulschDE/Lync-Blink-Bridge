@@ -10,6 +10,7 @@ using System.Management;
 using System.Diagnostics;
 using System.Threading;
 using System.Drawing;
+using Microsoft.Lync.Model.Conversation;
 
 namespace LyncBlinkBridge
 {
@@ -115,9 +116,12 @@ namespace LyncBlinkBridge
                 // try to get the running lync client and register for change events, if Client is not running then ClientNoFound Exception is thrown by lync api
                 lyncClient = LyncClient.GetClient();
                 lyncClient.StateChanged += lyncClient_StateChanged;
-                
+
                 if (lyncClient.State == ClientState.SignedIn)
+                {
                     lyncClient.Self.Contact.ContactInformationChanged += Contact_ContactInformationChanged;
+                    lyncClient.ConversationManager.ConversationAdded += ConversationManager_ConversationAdded;
+                        }
     
                 SetCurrentContactState();
             }
@@ -135,6 +139,24 @@ namespace LyncBlinkBridge
 
                 trayIcon.ShowBalloonTip(1000, "Error", "Something went wrong by getting your Lync status. Running in manual mode now. Please use the context menu to change your blink color", ToolTipIcon.Warning);
             }
+        }
+
+        private void ConversationManager_ConversationAdded(object sender, ConversationManagerEventArgs e)
+        {
+            if (ContainsAVCall((Conversation)e.Conversation))
+            {
+                e.Conversation.Modalities[ModalityTypes.AudioVideo].ModalityStateChanged += BlinkLyncConnectorAppContext_ModalityStateChanged;
+                SetBlink1State(new Rgb(0, 0, 255));
+            }
+        }
+
+        private bool ContainsAVCall(Conversation c)
+        {
+            return c.Modalities.ContainsKey(ModalityTypes.AudioVideo) && c.Modalities[ModalityTypes.AudioVideo].State != ModalityState.Disconnected;
+        }
+
+        private void BlinkLyncConnectorAppContext_ModalityStateChanged(object sender, Microsoft.Lync.Model.Conversation.ModalityStateChangedEventArgs e)
+        {
         }
 
         void SetLyncIntegrationMode(bool isLyncIntegrated)
