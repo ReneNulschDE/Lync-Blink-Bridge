@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Drawing;
 using Microsoft.Lync.Model.Conversation;
+using System.IO;
 
 namespace LyncBlinkBridge
 {
@@ -222,8 +223,28 @@ namespace LyncBlinkBridge
                 }
             }
 
+            SetFileState(color);
+
             SetIconState(color);
 
+        }
+
+        void SetFileState(Rgb color)
+        {
+            if (Properties.Settings.Default.ColorStatusFileName.Length > 0)
+            {
+                try
+                {
+                    using (StreamWriter sw = File.CreateText(Properties.Settings.Default.ColorStatusFileName))
+                    {
+                        sw.Write(string.Format("#{0:X2}{1:X2}{2:X2}", color.Red, color.Green, color.Blue));
+                    }
+                }
+                catch (Exception exc)
+                {
+                    trayIcon.ShowBalloonTip(3000, "", string.Format("Can't create status file {0}. Error: {2}", Properties.Settings.Default.ColorStatusFileName, exc.Message), ToolTipIcon.Error);
+                }
+            }
         }
 
         void SetIconState(Rgb color)
